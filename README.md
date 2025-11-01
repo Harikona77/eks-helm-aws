@@ -31,7 +31,7 @@ kubectl version --client
 
 Associating IAM OIDC Provider with my cluster
 
-eksctl utils associate-iam-oidc-provider --cluster eks-ebs-csi-cluster  --approve --region ap-south-1
+eksctl utils associate-iam-oidc-provider --cluster demo-cluster  --approve --region ap-south-1
 
 ///
 

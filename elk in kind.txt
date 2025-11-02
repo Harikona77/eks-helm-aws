@@ -1,0 +1,175 @@
+For Ubuntu in WSL:
+
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+
+Add Elastic Helm repository
+
+helm repo add elastic https://helm.elastic.co
+helm repo update
+
+
+kibana
+
+helm install kibana elastic/kibana -n elastic-system
+
+
+elastic
+
+helm install elasticsearch elastic/elasticsearch \
+  --namespace elastic-system --create-namespace
+
+//
+
+helm uninstall kibana -n elastic-system
+helm uninstall elasticsearch -n elastic-system
+helm uninstall logstash -n elastic-system
+kubectl delete namespace elastic-system
+
+
+//
+Install Filebeat with Helm//
+
+helm install filebeat elastic/filebeat \
+  -n elastic-system -f filebeat-values.yaml
+
+//
+
+kubectl get secrets -n elastic-system
+
+
+//password//
+
+kubectl get secret elasticsearch-master-credentials -n elastic-system -o go-template='{{index .data "password" | base64decode}}'
+
+
+//
+
+kubectl create secret generic elastic-credentials \
+  -n elastic-system \
+  --from-literal=ELASTIC_PASSWORD=7z3PVLGLNET8qdAk
+
+
+//Create the secret manually/
+
+kubectl create secret generic elastic-credentials \
+  -n elastic-system \
+  --from-literal=ELASTIC_PASSWORD=changeme 
+
+//
+
+
+kubectl get secret elastic-credentials -n elastic-system
+
+
+//
+
+helm uninstall filebeat -n elastic-system
+
+
+helm install filebeat elastic/filebeat -n elastic-system -f filebeat-values.yaml
+
+kubectl get pods -n elastic-system
+
+
+//
+
+🔍 Step 4: Create a data view in Kibana
+
+1️⃣ Go to Kibana → Discover
+2️⃣ It will ask to “Create data view”
+3️⃣ Enter the name: filebeat-*
+4️⃣ Choose @timestamp as the time field
+5️⃣ Click Create data view
+
+
+
+cat <<EOF > simple-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simple-pod
+  labels:
+    app: simple-pod
+spec:
+  containers:
+    - name: busybox
+      image: busybox
+      command: ["sh", "-c", "while true; do echo 'Simple log message at $(date)'; sleep 5; done"]
+EOF
+
+kubectl apply -f simple-pod.yaml
+
+
+
+kubectl get pods
+
+
+kubectl logs -f simple-pod
+
+
+🔍 5️⃣ Create or select a data view
+
+In Kibana’s left menu:
+
+Go to Discover
+
+If asked to “Create data view”:
+
+Name: filebeat-*
+
+Time field: @timestamp
+
+Click Create data view
+
+🔎 6️⃣ Search your pod’s logs
+
+At the top search bar, enter:
+
+kubernetes.pod.name: simple-pod
+
+
+Now you’ll see your pod’s log messages:
+
+Simple log message at Sat Nov  1 13:20:34 UTC 2025
+Simple log message at Sat Nov  1 13:20:39 UTC 2025
+...
+
+🧪 7️⃣ (Optional) Generate custom logs manually
+
+You can also manually write more logs inside the pod:
+
+kubectl exec -it simple-pod -- sh
+
+
+Then inside the container:
+
+echo "Manual log line 1"
+echo "Manual log line 2"
+
+
+Exit (Ctrl+D) and wait ~5–10 seconds — refresh Kibana Discover again.
+You’ll see your “Manual log line” messages appear, because Filebeat picks up stdout logs automatically.
+
+
+
+
+
+sudo rm -f /usr/local/bin/helm
+
+
+kubectl get namespace elastic-system -o json | jq '.spec.finalizers = []' | kubectl replace --raw "/api/v1/namespaces/logging/finalize" -f -
+
+
+
+
+
+
+
+
+
+
+
+
+
+
